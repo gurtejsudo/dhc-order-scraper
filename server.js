@@ -8,8 +8,13 @@ const cors = require('cors');
 
 const app = express();
 const PORT = 3000;
-
-app.use(cors());
+app.use(cors({
+    origin: [
+        "https://gurtejpalsingh.com",
+        "https://www.gurtejpalsingh.com"
+    ],
+    methods: ["GET", "POST"],
+}));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
