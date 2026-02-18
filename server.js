@@ -7,28 +7,19 @@ const fs = require('fs');
 const cors = require('cors');
 
 const app = express();
-const PORT = 3000;
-app.use(cors({
-    origin: [
-        "https://gurtejpalsingh.com",
-        "https://www.gurtejpalsingh.com"
-    ],
-    methods: ["GET", "POST"],
-}));
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+const PORT = process.env.PORT || 3000;
 
+/**
+ * 🔐 Restrict direct access
+ */
 app.use((req, res, next) => {
     const allowedHost = "gurtejpalsingh.com";
-
     const referer = req.headers.referer || "";
 
-    if (!referer.includes(allowedHost)) {
-        return res.status(403).send("Direct access not allowed.");
+    // Allow health checks (Render)
+    if (req.path === "/") {
+        return res.status(403).send("Access restricted.");
     }
-
-    next();
-});
 
 // Serve downloads directory
 const DOWNLOADS_DIR = path.join(__dirname, 'downloads');
