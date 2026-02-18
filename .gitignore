@@ -1,0 +1,7 @@
+node_modules
+downloads
+.DS_Store
+package-lock.json
+debug_test.js
+test_*.js
+*.log

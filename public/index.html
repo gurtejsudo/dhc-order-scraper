@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Delhi High Court Order Scraper — Search cases and download court orders as merged PDFs.">
+    <title>DHC Order Scraper — Delhi High Court Orders</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Floating particles background -->
+    <div class="particles" id="particles"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="logo-section">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="20" cy="20" r="18" stroke="currentColor" stroke-width="2"/>
+                        <path d="M12 28h16M14 24h12M20 10v14M16 14h8l-4-4-4 4z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="logo-title">DHC Order Scraper</h1>
+                    <p class="logo-subtitle">Delhi High Court • Case Orders</p>
+                </div>
+            </div>
+            <div class="header-badge">
+                <span class="badge-dot"></span>
+                <span>Live Connection</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Search Card -->
+        <section class="card search-card" id="search-section">
+            <div class="card-header">
+                <div class="card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="card-title">Search Case</h2>
+                    <p class="card-desc">Enter case details to find and download court orders</p>
+                </div>
+            </div>
+
+            <form id="searchForm" class="search-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="caseType" class="form-label">Case Type</label>
+                        <div class="select-wrapper">
+                            <select id="caseType" class="form-select" required>
+                                <option value="">Loading case types...</option>
+                            </select>
+                            <div class="select-arrow">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="caseNumber" class="form-label">Case Number</label>
+                        <input type="number" id="caseNumber" class="form-input" placeholder="e.g. 402" required min="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="year" class="form-label">Year</label>
+                        <div class="select-wrapper">
+                            <select id="year" class="form-select" required>
+                                <option value="">Loading years...</option>
+                            </select>
+                            <div class="select-arrow">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="searchBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                    </svg>
+                    <span>Search Case</span>
+                </button>
+            </form>
+        </section>
+
+        <!-- Loading State -->
+        <section class="card loading-card" id="loadingSection" style="display:none;">
+            <div class="loading-content">
+                <div class="spinner-ring">
+                    <div class="spinner"></div>
+                </div>
+                <h3 class="loading-title" id="loadingTitle">Searching...</h3>
+                <p class="loading-desc" id="loadingDesc">Connecting to Delhi High Court website</p>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <p class="progress-text" id="progressText"></p>
+            </div>
+        </section>
+
+        <!-- Error State -->
+        <section class="card error-card" id="errorSection" style="display:none;">
+            <div class="error-content">
+                <div class="error-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+                    </svg>
+                </div>
+                <h3 class="error-title">Something went wrong</h3>
+                <p class="error-message" id="errorMessage"></p>
+                <button class="btn btn-secondary" onclick="resetSearch()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                    </svg>
+                    <span>Try Again</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section class="card results-card" id="resultsSection" style="display:none;">
+            <div class="card-header results-header">
+                <div class="card-icon success">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="card-title" id="resultsCaseTitle">Case Orders</h2>
+                    <p class="card-desc" id="resultsCount"></p>
+                </div>
+                <button class="btn btn-primary btn-download-all" id="downloadAllBtn" onclick="downloadAndMerge()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    <span>Download All & Merge PDF</span>
+                </button>
+            </div>
+
+            <!-- Case Info Bar -->
+            <div class="case-info-bar" id="caseInfoBar"></div>
+
+            <!-- Orders Table -->
+            <div class="table-wrapper">
+                <table class="orders-table" id="ordersTable">
+                    <thead>
+                        <tr>
+                            <th>S.No.</th>
+                            <th>Case No.</th>
+                            <th>Date of Order</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <button class="btn btn-secondary btn-new-search" onclick="resetSearch()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                </svg>
+                <span>New Search</span>
+            </button>
+        </section>
+
+        <!-- Download Progress Section -->
+        <section class="card download-card" id="downloadSection" style="display:none;">
+            <div class="card-header">
+                <div class="card-icon downloading">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="card-title">Downloading Orders</h2>
+                    <p class="card-desc" id="downloadProgress">Preparing download...</p>
+                </div>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="downloadProgressBar"></div>
+            </div>
+            <div class="download-log" id="downloadLog"></div>
+        </section>
+
+        <!-- Merged PDF Download Section -->
+        <section class="card merged-card" id="mergedSection" style="display:none;">
+            <div class="merged-content">
+                <div class="merged-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                </div>
+                <h3 class="merged-title">Merged PDF Ready!</h3>
+                <p class="merged-info" id="mergedInfo"></p>
+                <div class="merged-stats" id="mergedStats"></div>
+                <a class="btn btn-primary btn-download-merged" id="downloadMergedBtn" href="#" download>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    <span>Download Merged PDF</span>
+                </a>
+                <button class="btn btn-secondary btn-new-search" onclick="resetSearch()" style="margin-top:12px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                    </svg>
+                    <span>New Search</span>
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>DHC Order Scraper &mdash; Unofficial tool for downloading Delhi High Court orders</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
