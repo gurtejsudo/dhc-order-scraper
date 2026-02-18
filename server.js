@@ -24,22 +24,47 @@ if (!fs.existsSync(DOWNLOADS_DIR)) {
     fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
 }
 
-// Global Middleware
-app.use(cors());
+// Configure CORS to only allow specific origins
+const allowedOrigins = ['https://gurtejpalsingh.com', 'http://localhost:3000', 'http://127.0.0.1:3000'];
+app.use(cors({
+    origin: function (origin, callback) {
+        // allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) === -1) {
+            const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+            return callback(new Error(msg), false);
+        }
+        return callback(null, true);
+    }
+}));
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/downloads', express.static(DOWNLOADS_DIR));
 
 /**
- * 🔐 Restrict direct access (Optional)
+ * 🔐 Restrict access to authorized domains only
  */
 app.use((req, res, next) => {
-    // Allow health checks (Render)
-    if (req.path === "/" && req.method === "GET") {
-        return next();
+    const origin = req.headers.origin || req.headers.referer || "";
+
+    // Always allow the root path (health checks)
+    if (req.path === "/") return next();
+
+    // Check if the request comes from an allowed origin
+    const isAllowed = allowedOrigins.some(o => origin.startsWith(o));
+
+    if (!isAllowed && process.env.NODE_ENV === 'production') {
+        console.warn(`🛑 Forbidden access attempt from: ${origin}`);
+        return res.status(403).json({
+            success: false,
+            error: "Access restricted. This API only accepts requests from gurtejpalsingh.com"
+        });
     }
+
     next();
 });
+
 
 /**
  * Helper: Create a session by loading the page to get cookies + CSRF token.
