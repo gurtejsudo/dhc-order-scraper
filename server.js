@@ -8,25 +8,7 @@ const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-/**
- * 🔐 Restrict direct access
- */
-app.use((req, res, next) => {
-    const allowedHost = "gurtejpalsingh.com";
-    const referer = req.headers.referer || "";
-
-    // Allow health checks (Render)
-    if (req.path === "/") {
-        return res.status(403).send("Access restricted.");
-    }
-
-// Serve downloads directory
 const DOWNLOADS_DIR = path.join(__dirname, 'downloads');
-if (!fs.existsSync(DOWNLOADS_DIR)) {
-    fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
-}
-app.use('/downloads', express.static(DOWNLOADS_DIR));
 
 // Common headers to mimic browser
 const BROWSER_HEADERS = {
@@ -36,6 +18,28 @@ const BROWSER_HEADERS = {
     'Connection': 'keep-alive',
     'Referer': 'https://delhihighcourt.nic.in/app/get-case-type-status',
 };
+
+// Ensure downloads directory exists
+if (!fs.existsSync(DOWNLOADS_DIR)) {
+    fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
+}
+
+// Global Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/downloads', express.static(DOWNLOADS_DIR));
+
+/**
+ * 🔐 Restrict direct access (Optional)
+ */
+app.use((req, res, next) => {
+    // Allow health checks (Render)
+    if (req.path === "/" && req.method === "GET") {
+        return next();
+    }
+    next();
+});
 
 /**
  * Helper: Create a session by loading the page to get cookies + CSRF token.
@@ -135,7 +139,8 @@ app.post('/api/search-case', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Case type, number, and year are required.' });
         }
 
-        console.log(`\n🔍 Searching for case: ${caseType} ${caseNumber}/${year}`);
+        const caseInfo = `${caseType} - ${caseNumber} / ${year}`;
+        console.log(`\n🔍 Searching for case: ${caseInfo}`);
 
         // Step 1: Create a fresh session (get cookies + CSRF + captcha)
         const session = await createSession();
@@ -182,7 +187,6 @@ app.post('/api/search-case', async (req, res) => {
         }
 
         // Step 3: DataTables server-side request to get case data
-        // DataTables sends specific parameters for server-side processing
         const dtParams = new URLSearchParams();
         dtParams.append('draw', '1');
         dtParams.append('columns[0][data]', '0');
@@ -248,17 +252,11 @@ app.post('/api/search-case', async (req, res) => {
         }
 
         // Step 4: Parse the DataTable response
-        // Each row is an OBJECT with keys: pno, ctype, cno, cyear, pet, res, orderdate, etc.
-        // The "ctype" field contains HTML with the case number and links for Orders/Judgments
         let ordersUrl = '';
-        let caseDetails = {};
+        let caseDetailsResult = {};
 
         for (const row of dtData.data) {
             const caseHtml = row.ctype || row[1] || '';
-            console.log(`  🔎 Row ctype HTML (first 300 chars): ${caseHtml.substring(0, 300)}`);
-
-            // The href in DHC's HTML is unquoted: href=https://...
-            // Use regex to extract the orders URL
             const ordersMatch = caseHtml.match(/href=([^\s>']+case-type-status-details[^\s>']*)/i);
             if (ordersMatch) {
                 ordersUrl = ordersMatch[1];
@@ -267,7 +265,6 @@ app.post('/api/search-case', async (req, res) => {
                 }
             }
 
-            // Also try cheerio parsing as fallback
             if (!ordersUrl) {
                 const $row = cheerio.load(caseHtml);
                 $row('a').each((i, link) => {
@@ -282,7 +279,7 @@ app.post('/api/search-case', async (req, res) => {
                 });
             }
 
-            caseDetails = {
+            caseDetailsResult = {
                 caseInfo: `${caseType} - ${caseNumber} / ${year}`,
                 parties: (row.pet || row[2] || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim(),
                 listingDate: (row.orderdate || row[3] || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim(),
@@ -293,14 +290,13 @@ app.post('/api/search-case', async (req, res) => {
             return res.json({
                 success: false,
                 error: 'Case found but could not locate the orders link.',
-                caseDetails,
+                caseDetails: caseDetailsResult,
             });
         }
 
         console.log(`  🔗 Orders URL: ${ordersUrl.substring(0, 80)}...`);
 
-        // Step 5: The orders page also uses DataTables server-side processing
-        // We need to make a GET request with DataTables params to get the order data as JSON
+        // Step 5: Fetch order data
         const ordersDtParams = new URLSearchParams();
         ordersDtParams.append('draw', '1');
         ordersDtParams.append('columns[0][data]', 'DT_RowIndex');
@@ -336,11 +332,9 @@ app.post('/api/search-case', async (req, res) => {
         ordersDtParams.append('order[0][column]', '0');
         ordersDtParams.append('order[0][dir]', 'asc');
         ordersDtParams.append('start', '0');
-        ordersDtParams.append('length', '-1'); // -1 = get ALL orders
+        ordersDtParams.append('length', '-1');
         ordersDtParams.append('search[value]', '');
         ordersDtParams.append('search[regex]', 'false');
-
-        console.log(`  📋 Fetching orders via DataTables AJAX...`);
 
         const ordersResponse = await axios.get(
             `${ordersUrl}?${ordersDtParams.toString()}`,
@@ -356,18 +350,13 @@ app.post('/api/search-case', async (req, res) => {
         );
 
         const ordersData = ordersResponse.data;
-        console.log(`  📊 Orders DataTable: draw=${ordersData.draw}, recordsTotal=${ordersData.recordsTotal}, rows=${ordersData.data?.length || 0}`);
-
-        // Step 6: Parse order rows from the JSON response
         const orders = [];
         if (ordersData.data && ordersData.data.length > 0) {
             for (const orderRow of ordersData.data) {
-                // case_no_order_link contains HTML like: <a href="...">CS(OS) 402/2023</a>
                 const orderHtml = orderRow.case_no_order_link || '';
                 const linkMatch = orderHtml.match(/href=["']?([^"'\s>]+)/i);
                 const textMatch = orderHtml.match(/>([^<]+)</);
 
-                // order_date can be an object {display: "13/02/2026", timestamp: ...} or a string
                 let orderDate = '';
                 if (typeof orderRow.order_date === 'object' && orderRow.order_date) {
                     orderDate = orderRow.order_date.display || '';
@@ -394,17 +383,13 @@ app.post('/api/search-case', async (req, res) => {
 
         res.json({
             success: true,
-            caseDetails,
+            caseDetails: caseDetailsResult,
             orders,
             totalOrders: orders.length,
         });
 
     } catch (error) {
         console.error('Error searching case:', error.message);
-        if (error.response) {
-            console.error('  Response status:', error.response.status);
-            console.error('  Response data (first 500 chars):', String(error.response.data).substring(0, 500));
-        }
         res.status(500).json({ success: false, error: `Failed to search case: ${error.message}` });
     }
 });
@@ -441,14 +426,11 @@ app.post('/api/download-and-merge', async (req, res) => {
                 });
 
                 const pdfBytes = response.data;
-
-                // Save individual file
                 const safeDate = (order.date || `order_${i + 1}`).replace(/\//g, '-');
                 const individualFilename = `Order_${i + 1}_${safeDate}.pdf`;
                 const individualPath = path.join(DOWNLOADS_DIR, individualFilename);
                 fs.writeFileSync(individualPath, pdfBytes);
 
-                // Merge into combined PDF
                 try {
                     const existingPdf = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
                     const pages = await mergedPdf.copyPages(existingPdf, existingPdf.getPageIndices());
@@ -461,39 +443,21 @@ app.post('/api/download-and-merge', async (req, res) => {
                     });
                 } catch (pdfError) {
                     console.error(`  ⚠️ Could not merge PDF ${i + 1}: ${pdfError.message}`);
-                    errors.push({
-                        index: i + 1,
-                        date: order.date,
-                        error: `Could not merge: ${pdfError.message}`,
-                    });
-                    downloadedFiles.push({
-                        filename: individualFilename,
-                        date: order.date,
-                        pages: 0,
-                        size: pdfBytes.length,
-                        mergeError: true,
-                    });
+                    errors.push({ index: i + 1, date: order.date, error: `Could not merge: ${pdfError.message}` });
+                    downloadedFiles.push({ filename: individualFilename, date: order.date, pages: 0, size: pdfBytes.length, mergeError: true });
                 }
 
-                // Small delay between downloads to be polite
                 if (i < orders.length - 1) {
                     await new Promise(resolve => setTimeout(resolve, 500));
                 }
 
             } catch (downloadError) {
                 console.error(`  ❌ Failed to download order ${i + 1}: ${downloadError.message}`);
-                errors.push({
-                    index: i + 1,
-                    date: order.date,
-                    error: downloadError.message,
-                });
+                errors.push({ index: i + 1, date: order.date, error: downloadError.message });
             }
         }
 
-        // Save merged PDF
-        const safeCaseInfo = (caseInfo || 'case')
-            .replace(/[^a-zA-Z0-9_. ()-]/g, '_')
-            .replace(/\s+/g, '_');
+        const safeCaseInfo = (caseInfo || 'case').replace(/[^a-zA-Z0-9_. ()-]/g, '_').replace(/\s+/g, '_');
         const mergedFilename = `Merged_Order_File_${safeCaseInfo}.pdf`;
         const mergedFilePath = path.join(DOWNLOADS_DIR, mergedFilename);
 
