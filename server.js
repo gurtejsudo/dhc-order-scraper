@@ -18,6 +18,18 @@ app.use(cors({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.use((req, res, next) => {
+    const allowedHost = "gurtejpalsingh.com";
+
+    const referer = req.headers.referer || "";
+
+    if (!referer.includes(allowedHost)) {
+        return res.status(403).send("Direct access not allowed.");
+    }
+
+    next();
+});
+
 // Serve downloads directory
 const DOWNLOADS_DIR = path.join(__dirname, 'downloads');
 if (!fs.existsSync(DOWNLOADS_DIR)) {
