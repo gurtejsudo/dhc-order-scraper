@@ -1,6 +1,7 @@
 /* ================================================
    DHC Order Scraper
    ================================================ */
+
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
 
 :root {
@@ -129,10 +130,10 @@ body {
 .logo-title {
     font-family: var(--font-display);
     font-size: 1.3rem;
-    font-weight: 800;
+    font-weight: 400;
     color: var(--color-ink);
     letter-spacing: -0.01em;
-    font-style: bold;
+    font-style: italic;
 }
 
 .logo-subtitle {
@@ -850,6 +851,75 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
     background: var(--color-border-strong);
+}
+
+/* ================================================
+   Dark Mode
+   ================================================ */
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* Warm dark — roasted paper, not cold navy */
+        --color-bg:            #18160f;
+        --color-bg-secondary:  #211e15;
+        --color-surface:       #1e1b12;
+        --color-surface-hover: #28241a;
+        --color-border:        #35311f;
+        --color-border-strong: #4a4530;
+
+        --color-ink:           #e8e0d0;
+        --color-ink-secondary: #b8ae9a;
+        --color-ink-muted:     #736b58;
+
+        --color-accent:        #e8e0d0;
+        --color-accent-warm:   #d4723a;   /* terracotta brightened for dark */
+
+        --color-success:       #52b788;
+        --color-success-light: #74c69d;
+        --color-success-bg:    rgba(82, 183, 136, 0.12);
+
+        --color-danger:        #e05c5c;
+        --color-danger-light:  #f08080;
+        --color-danger-bg:     rgba(224, 92, 92, 0.12);
+
+        --color-warning:       #d4a017;
+
+        /* Shadows deeper on dark */
+        --shadow-sm:  0 1px 3px rgba(0, 0, 0, 0.35);
+        --shadow-md:  0 2px 10px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+        --shadow-lg:  0 4px 20px rgba(0, 0, 0, 0.5), 0 1px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Logo icon inverts — light icon on dark bg becomes dark icon on light */
+    .logo-icon {
+        background: var(--color-ink);
+        color: var(--color-bg);
+    }
+
+    /* Merged card dark tint */
+    .merged-card {
+        background: rgba(82, 183, 136, 0.06);
+        border-color: rgba(82, 183, 136, 0.2);
+    }
+
+    /* Error card dark tint */
+    .error-card {
+        background: rgba(224, 92, 92, 0.06);
+    }
+
+    /* Focus ring adapts */
+    .form-input:focus,
+    .form-select:focus {
+        box-shadow: 0 0 0 2px rgba(232, 224, 208, 0.1);
+    }
+
+    /* Scrollbar thumb */
+    ::-webkit-scrollbar-thumb {
+        background: var(--color-border-strong);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--color-ink-muted);
+    }
 }
 
 /* ================================================
