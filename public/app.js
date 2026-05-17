@@ -19,31 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Create floating particles
-function createParticles() {
-    const container = document.getElementById('particles');
-    const count = 25;
-
-    for (let i = 0; i < count; i++) {
-        const particle = document.createElement('div');
-        particle.classList.add('particle');
-        particle.style.left = Math.random() * 100 + '%';
-        particle.style.animationDuration = (8 + Math.random() * 15) + 's';
-        particle.style.animationDelay = Math.random() * 10 + 's';
-        particle.style.width = (2 + Math.random() * 3) + 'px';
-        particle.style.height = particle.style.width;
-
-        // Random colors
-        const colors = [
-            'rgba(139, 92, 246, 0.5)',
-            'rgba(6, 182, 212, 0.4)',
-            'rgba(16, 185, 129, 0.4)',
-            'rgba(167, 139, 250, 0.4)',
-        ];
-        particle.style.background = colors[Math.floor(Math.random() * colors.length)];
-
-        container.appendChild(particle);
-    }
-}
 
 // ============================================================
 // Load Case Types from DHC
