@@ -12,7 +12,6 @@ let caseInfo = '';
 // Initialization
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
-    createParticles();
     loadCaseTypes();
 
     document.getElementById('searchForm').addEventListener('submit', handleSearch);
